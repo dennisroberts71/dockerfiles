@@ -1,4 +1,4 @@
-FROM jeanblanchard/java:jdk-7
+FROM jeanblanchard/java:jdk-8
 MAINTAINER Dennis Roberts <dennis@cyverse.org>
 ARG git_commit=unknown
 LABEL org.iplantc.de.grouper.git-ref="$git_commit"
@@ -10,21 +10,21 @@ COPY configs /tmp/configs
 ENV ANT_HOME /opt/apache-ant
 ENV PATH $PATH:$ANT_HOME/bin
 ENV ANT_BASE https://www.apache.org/dist/ant/binaries
-ENV ANT_VERSION 1.9.6
+ENV ANT_VERSION 1.9.9
 ENV ANT_URL $ANT_BASE/apache-ant-$ANT_VERSION-bin.tar.gz
 
 # Environment variables for tomcat.
 ENV CATALINA_HOME /opt/tomcat
 ENV TOMCAT_CONF /etc/tomcat
 ENV PATH $CATALINA_HOME/bin:$PATH
-ENV TOMCAT_MAJOR 7
-ENV TOMCAT_VERSION 7.0.65
+ENV TOMCAT_MAJOR 8
+ENV TOMCAT_VERSION 8.0.41
 ENV TOMCAT_BASE https://archive.apache.org/dist/tomcat
 ENV TOMCAT_TGZ apache-tomcat-$TOMCAT_VERSION.tar.gz
 ENV TOMCAT_TGZ_URL $TOMCAT_BASE/tomcat-$TOMCAT_MAJOR/v$TOMCAT_VERSION/bin/$TOMCAT_TGZ
 
 # Grouper environment variables.
-ENV GROUPER_VERSION 2.2.2
+ENV GROUPER_VERSION 2.3.0
 ENV GROUPER_BASE_URL http://software.internet2.edu/grouper/release/$GROUPER_VERSION
 ENV GROUPER_API_TGZ grouper.apiBinary-$GROUPER_VERSION.tar.gz
 ENV GROUPER_UI_TGZ grouper.ui-$GROUPER_VERSION.tar.gz
@@ -38,12 +38,16 @@ ENV GROUPER_UI_HOME $GROUPER_BASE/ui
 ENV GROUPER_WS_HOME $GROUPER_BASE/ws
 ENV PATH $GROUPER_HOME/bin:$PATH
 
+# Environment vairables for Bouncy Castle
+ENV BCPROV_BASE http://bouncycastle.org/download
+ENV BCPROV_JAR bcprov-jdk15on-156.jar
+
 RUN apk add --update curl \
     && mkdir -p /tmp/jce \
     && curl -jksSLH "Cookie: oraclelicense=accept-securebackup-cookie" -o /tmp/jce/jce.zip \
-           http://download.oracle.com/otn-pub/java/jce/7/UnlimitedJCEPolicyJDK7.zip \
+           http://download.oracle.com/otn-pub/java/jce/8/jce_policy-8.zip \
     && unzip -d /tmp/jce -o /tmp/jce/jce.zip \
-    && cp /tmp/jce/UnlimitedJCEPolicy/*.jar /opt/jdk/jre/lib/security/ \
+    && cp /tmp/jce/UnlimitedJCEPolicyJDK8/*.jar /opt/jdk/jre/lib/security/ \
     && rm -rf /tmp/jce \
     \
     && apk add gnupg \
@@ -94,11 +98,13 @@ RUN apk add --update curl \
     && cd "$GROUPER_BASE" \
     && tar -xzvf /tmp/tarballs/grouper-api.tar.gz \
     && mv "grouper.apiBinary-$GROUPER_VERSION" "$GROUPER_HOME" \
+    && mv /tmp/configs/api/ehcache.xml "$GROUPER_HOME/conf/" \
     && mv /tmp/configs/api/grouper.properties "$GROUPER_HOME/conf/" \
     && mv /tmp/configs/api/grouper.hibernate.properties "$GROUPER_HOME/conf/" \
     && mv /tmp/configs/api/grouper-loader.properties "$GROUPER_HOME/conf/" \
     && mv /tmp/configs/api/subject.properties "$GROUPER_HOME/conf" \
     && mv /tmp/configs/api/log4j.properties "$GROUPER_HOME/conf" \
+    && curl -fSL "$BCPROV_BASE/$BCPROV_JAR" -o "$GROUPER_HOME/lib/grouper/$BCPROV_JAR" \
     \
     && cd "$GROUPER_BASE" \
     && tar -xzvf /tmp/tarballs/grouper-ui.tar.gz \
